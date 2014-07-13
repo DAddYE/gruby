@@ -8,8 +8,8 @@ const (
 	c = "hello"
 )
 
-func (a T) Hello1(a, b int) {}
+func (a T) HelloWorld1(a, b int) {}
 
-func (a T) Hello2() {}
+func (a T) helloWorld2() {}
 
-func Hello3(a, b int) {}
+func HelloWorld3(a, b int) {}

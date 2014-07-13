@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"os"
 	"strconv"
+	"unicode"
 )
 
 func (p *Printer) decl(decl ast.Decl) {
@@ -144,12 +145,22 @@ func (p *Printer) spec(spec ast.Spec) {
 
 func (p *Printer) funcDecl(d *ast.FuncDecl) {
 	p.setComment(d.Doc)
+	nname := underscore(d.Name.Name)
 	p.print(d.Pos(), DEF, blank)
-	p.expr(d.Name)
+	p.print(nname)
 	p.signature(d.Type.Params, d.Type.Results)
 	p.print(indent)
 	p.stmtList(d.Body.List)
-	p.print(dedent, END, newline)
+	p.print(dedent, END)
+	if isPrivate(d.Name) {
+		p.print(newline)
+		p.print(PRIVATE, blank, token.COLON, nname)
+	}
+	p.print(newline)
+}
+
+func isPrivate(ident *ast.Ident) bool {
+	return unicode.IsLower([]rune(ident.Name)[0])
 }
 
 func (p *Printer) parameters(fields *ast.FieldList) {

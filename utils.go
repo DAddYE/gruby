@@ -3,30 +3,9 @@ package gruby
 import (
 	"fmt"
 	"go/ast"
-	"os"
 	"strings"
+	"unicode"
 )
-
-const DEBUG = true
-
-func debug(args ...string) {
-	if !DEBUG {
-		return
-	}
-	i := 0
-	for ; i < len(args); i++ {
-		fmt.Fprintf(os.Stderr, "\033[31m%s\033[0m", args[i])
-	}
-	i--
-	if args[i][len(args[i])-1] != '\n' {
-		fmt.Fprint(os.Stderr, "\n")
-	}
-}
-
-func debugf(format string, args ...interface{}) {
-	str := fmt.Sprintf(format, args...)
-	debug(str)
-}
 
 func panicf(format string, args ...interface{}) {
 	s := fmt.Sprintf(format, args...)
@@ -42,6 +21,30 @@ func classify(s string) string {
 	}
 
 	return strings.Join(words, "")
+}
+
+func underscore(s string) string {
+	b := []rune(s)
+
+	for i := 0; i < len(b); i++ {
+		ch := b[i]
+
+		if i == 0 {
+			if unicode.IsUpper(ch) {
+				b[0] = unicode.ToLower(ch)
+			}
+			continue
+		}
+
+		if unicode.IsUpper(ch) {
+			b[i] = unicode.ToLower(ch)
+			b = append(b, 0)
+			copy(b[i+1:], b[i:])
+			b[i] = '_'
+		}
+	}
+
+	return string(b)
 }
 
 // Remove parens

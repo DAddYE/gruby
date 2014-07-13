@@ -22,11 +22,11 @@ const (
 	c = "hello"
 )
 
-func (a T) Hello1(a, b int) {}
+func (a T) HelloWorld1(a, b int) {}
 
-func (a T) Hello2() {}
+func (a T) helloWorld2() {}
 
-func Hello3(a, b int) {}
+func HelloWorld3(a, b int) {}
 ```
 
 Into:
@@ -37,15 +37,16 @@ class GrubyTest
   V = 1
   C = "hello"
 
-  def Hello3(a, b)
+  def hello_world3(a, b)
   end
 
   class T < Fixnum
-    def Hello1(a, b)
+    def hello_world1(a, b)
     end
 
-    def Hello2()
+    def hello_world2()
     end
+    private :hello_world2
 
   end
 end
