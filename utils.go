@@ -47,10 +47,46 @@ func underscore(s string) string {
 	return string(b)
 }
 
-// Remove parens
 func stripParens(x ast.Expr) ast.Expr {
 	if x, ok := x.(*ast.ParenExpr); ok {
 		return stripParens(x.X)
 	}
 	return x
+}
+
+func cutoff(e *ast.BinaryExpr, depth int) int {
+	has4, has5, maxProblem := walkBinary(e)
+	if maxProblem > 0 {
+		return maxProblem + 1
+	}
+	if has4 && has5 {
+		if depth == 1 {
+			return 5
+		}
+		return 4
+	}
+	if depth == 1 {
+		return 6
+	}
+	return 4
+}
+
+func diffPrec(expr ast.Expr, prec int) int {
+	x, ok := expr.(*ast.BinaryExpr)
+	if !ok || prec != x.Op.Precedence() {
+		return 1
+	}
+	return 0
+}
+
+func reduceDepth(depth int) int {
+	depth--
+	if depth < 1 {
+		depth = 1
+	}
+	return depth
+}
+
+func isPrivate(ident *ast.Ident) bool {
+	return unicode.IsLower([]rune(ident.Name)[0])
 }

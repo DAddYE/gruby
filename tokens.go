@@ -14,6 +14,8 @@ const (
 	SEMI
 	VAR
 	PRIVATE
+	STRUCT
+	NEW
 )
 
 var tokens = [...]string{
@@ -28,6 +30,8 @@ var tokens = [...]string{
 	SEMI:    ";",
 	VAR:     "@",
 	PRIVATE: "private",
+	STRUCT:  "Struct",
+	NEW:     "new",
 }
 
 func (t GrubyToken) String() string { return tokens[t] }

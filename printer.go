@@ -18,6 +18,14 @@ const (
 	dedent  = whiteSpace('<')
 )
 
+type context int
+
+const (
+	inDefault context = iota
+	inConst
+	inIota
+)
+
 // This represent the source of destination
 type Printer struct {
 	fset       *token.FileSet
@@ -25,6 +33,7 @@ type Printer struct {
 	indent     uint   // indent level
 	indentSize uint   // size of the indentation level
 	indentCh   rune   // char to use as indent
+	context    context
 
 	// Positions
 	pos  token.Position // position in ast

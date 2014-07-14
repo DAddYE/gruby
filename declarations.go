@@ -6,7 +6,6 @@ import (
 	"go/token"
 	"os"
 	"strconv"
-	"unicode"
 )
 
 func (p *Printer) decl(decl ast.Decl) {
@@ -34,12 +33,10 @@ func (p *Printer) genDecl(d *ast.GenDecl) {
 	p.setComment(d.Doc)
 	p.print(d.Pos())
 
-	inIota := false
-	var iotaVal ast.Expr
-
 	for i, spec := range d.Specs {
 		switch d.Tok {
 		case token.CONST:
+			p.context = inConst
 			valueSpec := spec.(*ast.ValueSpec)
 			exprList := make([]ast.Expr, len(valueSpec.Names))
 			copy(exprList, valueSpec.Values)
@@ -55,19 +52,8 @@ func (p *Printer) genDecl(d *ast.GenDecl) {
 
 			for _, expr := range exprList {
 				if expr != nil {
-					switch x := expr.(type) {
-					case *ast.Ident:
-						if x.Name == "iota" {
-							inIota = true
-							iotaVal = &ast.BasicLit{Value: "0", Kind: token.INT}
-							p.expr(iotaVal)
-						} else {
-							p.expr(expr)
-						}
-					default:
-						p.expr(expr)
-					}
-				} else if inIota {
+					p.expr(expr)
+				} else if p.context == inIota {
 					p.print(strconv.Itoa(i))
 				} else {
 					p.print(NIL)
@@ -82,6 +68,8 @@ func (p *Printer) genDecl(d *ast.GenDecl) {
 
 		p.print(newline)
 	}
+
+	p.context = inDefault
 }
 
 func (p *Printer) specClass(spec *ast.TypeSpec, funcs []*ast.FuncDecl) {
@@ -99,6 +87,7 @@ func (p *Printer) specClass(spec *ast.TypeSpec, funcs []*ast.FuncDecl) {
 		p.print(newline)
 	}
 	p.print(dedent, END)
+	p.print(newline)
 }
 
 func (p *Printer) spec(spec ast.Spec) {
@@ -126,15 +115,16 @@ func (p *Printer) spec(spec ast.Spec) {
 
 	case *ast.TypeSpec:
 		p.setComment(s.Doc)
-		t := s.Type.(*ast.Ident)
 		p.print(CLASS, blank)
 		p.expr(s.Name)
 		p.print(blank, INHERIT, blank)
-		if class, found := goTypeToRuby[t.Name]; found {
-			p.print(class)
-		} else {
-			p.print(classify(t.Name))
-		}
+		p.expr(s.Type)
+		// t := s.Type.(*ast.Ident)
+		// if class, found := goTypeToRuby[t.Name]; found {
+		// 	p.print(class)
+		// } else {
+		// 	p.print(classify(t.Name))
+		// }
 		p.print(SEMI, blank, END)
 		p.setComment(s.Comment)
 
@@ -159,10 +149,6 @@ func (p *Printer) funcDecl(d *ast.FuncDecl) {
 	p.print(newline)
 }
 
-func isPrivate(ident *ast.Ident) bool {
-	return unicode.IsLower([]rune(ident.Name)[0])
-}
-
 func (p *Printer) parameters(fields *ast.FieldList) {
 	p.print(fields.Opening, token.LPAREN)
 	for _, par := range fields.List {
@@ -174,17 +160,29 @@ func (p *Printer) parameters(fields *ast.FieldList) {
 	p.print(fields.Closing, token.RPAREN)
 }
 
+func (p *Printer) signature(params, result *ast.FieldList) {
+	if params != nil {
+		p.parameters(params)
+	}
+}
+
 func (p *Printer) identList(list []*ast.Ident) {
+	l := len(list) - 1
 	for i, x := range list {
 		p.print(x)
-		if i+1 < len(list) {
+		if i < l {
 			p.print(token.COMMA, blank)
 		}
 	}
 }
 
-func (p *Printer) signature(params, result *ast.FieldList) {
-	if params != nil {
-		p.parameters(params)
+func (p *Printer) identListPrefixed(list []*ast.Ident, prefix string) {
+	l := len(list) - 1
+	for i, x := range list {
+		p.print(prefix)
+		p.print(x)
+		if i < l {
+			p.print(token.COMMA, blank)
+		}
 	}
 }

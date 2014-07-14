@@ -17,10 +17,16 @@ package gruby_test
 type T int
 
 const (
-	Q = iota
+	Q = 1 << iota
 	V
 	c = "hello"
 )
+
+type S struct {
+	a, b int
+	T
+	c string
+}
 
 func (a T) HelloWorld1(a, b int) {}
 
@@ -33,8 +39,8 @@ Into:
 
 ```rb
 class GrubyTest
-  Q = 0
-  V = 1
+  Q = 1 << 0
+  V = nil
   C = "hello"
 
   def hello_world3(a, b)
@@ -49,6 +55,8 @@ class GrubyTest
     private :hello_world2
 
   end
+
+  class S < Struct.new(:a, :b, :c); end
 end
 ```
 
