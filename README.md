@@ -14,25 +14,41 @@ To give you an idea right now it translates:
 ```go
 package gruby_test
 
-type T int
+type A int
+type B []string
+type C map[string]int
+type D func(string) string
+type E chan<- string
+type F interface {
+	isUseless()
+}
 
 const (
 	Q = 1 << iota
 	V
 	c = "hello"
+	q = -1
+)
+
+var (
+	a, b int
+	c    string
 )
 
 type S struct {
 	a, b int
 	T
 	c string
+	z func()
 }
 
-func (a T) HelloWorld1(a, b int) {}
+func (a S) HelloWorld1(a, b int) {
+	x := 1
+}
 
-func (a T) helloWorld2() {}
+func (a S) helloWorld2() {}
 
-func HelloWorld3(a, b int) {}
+func hiThere(a, b int) {}
 ```
 
 Into:
@@ -40,13 +56,24 @@ Into:
 ```rb
 class GrubyTest
   Q = 1 << 0
-  V = nil
+  V = Q + 1
   C = "hello"
+  Q = -1
 
-  def hello_world3(a, b)
+  attr_accessor :a, :b
+  attr_accessor :c
+
+  def hi_there(a, b)
   end
+  private :hi_there
 
-  class T < Fixnum
+  class A < Fixnum; end
+  class B < Array; end
+  class C < Hash; end
+  class D < Proc; end
+  class E; end
+  class F; end
+  class S < Struct.new(:a, :b, :t, :c, :z)
     def hello_world1(a, b)
     end
 
@@ -56,7 +83,6 @@ class GrubyTest
 
   end
 
-  class S < Struct.new(:a, :b, :c); end
 end
 ```
 
