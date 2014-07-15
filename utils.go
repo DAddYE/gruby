@@ -8,11 +8,28 @@ import (
 )
 
 func panicf(format string, args ...interface{}) {
-	s := fmt.Sprintf(format, args...)
+	s := fmt.Errorf(format, args...)
 	panic(s)
 }
 
-var constantize = strings.ToUpper
+func inspect(args ...interface{}) {
+	const inspectFmt = "%#+v\n"
+	for _, arg := range args {
+		fmt.Printf(inspectFmt, arg)
+	}
+}
+
+func inspect1(args ...interface{}) {
+	const inspectFmt = "%+v\n"
+	for _, arg := range args {
+		fmt.Printf(inspectFmt, arg)
+	}
+}
+
+// Functions to modify "names"
+func constantize(s string) string {
+	return strings.ToUpper(underscore(s))
+}
 
 func classify(s string) string {
 	words := strings.Split(s, "_")
@@ -21,6 +38,14 @@ func classify(s string) string {
 	}
 
 	return strings.Join(words, "")
+}
+
+func orignalName(s string) string {
+	return s
+}
+
+func symbolize(s string) string {
+	return ":" + underscore(s)
 }
 
 func underscore(s string) string {

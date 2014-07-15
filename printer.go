@@ -115,6 +115,8 @@ func (p *Printer) print(args ...interface{}) error {
 			continue
 		case GrubyToken:
 			p.print(x.String())
+		case rubyType:
+			p.print(x.String())
 		case token.Token:
 			p.print(x.String())
 		case whiteSpace:

@@ -28,19 +28,23 @@ func (p *Printer) declList(list []ast.Decl) {
 	}
 }
 
-// Declarations
 func (p *Printer) genDecl(d *ast.GenDecl) {
 	p.setComment(d.Doc)
 	p.print(d.Pos())
 
+	if d.Tok == token.CONST {
+		p.context = inConst
+	}
+
+	var iotaVal *ast.Ident
+
 	for i, spec := range d.Specs {
+		valueSpec := spec.(*ast.ValueSpec)
+		exprList := make([]ast.Expr, len(valueSpec.Names))
+		copy(exprList, valueSpec.Values)
+
 		switch d.Tok {
 		case token.CONST:
-			p.context = inConst
-			valueSpec := spec.(*ast.ValueSpec)
-			exprList := make([]ast.Expr, len(valueSpec.Names))
-			copy(exprList, valueSpec.Values)
-
 			for i, ident := range valueSpec.Names {
 				p.print(ident.Pos())
 				p.print(constantize(ident.Name))
@@ -53,8 +57,13 @@ func (p *Printer) genDecl(d *ast.GenDecl) {
 			for _, expr := range exprList {
 				if expr != nil {
 					p.expr(expr)
+					// if we meet a iota store is value
+					if iotaVal == nil && p.context == inIota {
+						iotaVal = valueSpec.Names[0]
+					}
 				} else if p.context == inIota {
-					p.print(strconv.Itoa(i))
+					p.expr(iotaVal)
+					p.print(blank, PLUS, blank, strconv.Itoa(i))
 				} else {
 					p.print(NIL)
 				}
@@ -62,6 +71,12 @@ func (p *Printer) genDecl(d *ast.GenDecl) {
 					p.print(token.COMMA, blank)
 				}
 			}
+		case token.VAR:
+			p.print(ATTR_ACCESSOR, blank)
+			p.identList(valueSpec.Names, symbolize)
+
+			// panic("assignments to vars: not implemented yet")
+
 		default:
 			p.spec(spec)
 		}
@@ -74,13 +89,7 @@ func (p *Printer) genDecl(d *ast.GenDecl) {
 
 func (p *Printer) specClass(spec *ast.TypeSpec, funcs []*ast.FuncDecl) {
 	p.print(CLASS, blank, spec.Name)
-	t := spec.Type.(*ast.Ident)
-	p.print(blank, INHERIT, blank)
-	if class, found := goTypeToRuby[t.Name]; found {
-		p.print(class)
-	} else {
-		p.print(classify(t.Name))
-	}
+	p.inherit(spec)
 	p.print(indent)
 	for _, fn := range funcs {
 		p.funcDecl(fn)
@@ -103,33 +112,43 @@ func (p *Printer) spec(spec ast.Spec) {
 		p.setComment(s.Comment)
 		p.print(s.EndPos)
 
-	case *ast.ValueSpec:
-		if s.Values == nil {
-			break
-		}
-		p.setComment(s.Doc)
-		p.identList(s.Names)
-		p.print(blank, token.ASSIGN, blank)
-		p.exprList(s.Values)
-		p.setComment(s.Comment)
+	// case *ast.ValueSpec:
+	// 	if s.Values == nil {
+	// 		break
+	// 	}
+	// 	p.setComment(s.Doc)
+	// 	p.identList(s.Names, orignalName)
+	// 	p.print(blank, token.ASSIGN, blank)
+	// 	p.exprList(s.Values)
+	// 	p.setComment(s.Comment)
 
 	case *ast.TypeSpec:
 		p.setComment(s.Doc)
 		p.print(CLASS, blank)
 		p.expr(s.Name)
-		p.print(blank, INHERIT, blank)
-		p.expr(s.Type)
-		// t := s.Type.(*ast.Ident)
-		// if class, found := goTypeToRuby[t.Name]; found {
-		// 	p.print(class)
-		// } else {
-		// 	p.print(classify(t.Name))
-		// }
+		p.inherit(s)
 		p.print(SEMI, blank, END)
 		p.setComment(s.Comment)
 
 	default:
 		panic("unreachable")
+	}
+}
+
+func (p *Printer) inherit(spec *ast.TypeSpec) {
+	switch x := spec.Type.(type) {
+	case *ast.Ident:
+		p.print(blank, INHERIT, blank)
+		if class, found := goTypeToRuby[x.Name]; found {
+			p.print(class)
+		} else {
+			p.print(classify(x.Name))
+		}
+	case *ast.InterfaceType, *ast.ChanType:
+		// skip this
+	default:
+		p.print(blank, INHERIT, blank)
+		p.expr(x)
 	}
 }
 
@@ -155,7 +174,7 @@ func (p *Printer) parameters(fields *ast.FieldList) {
 		if len(par.Names) == 0 {
 			panic("you must provide some parameters")
 		}
-		p.identList(par.Names)
+		p.identList(par.Names, underscore)
 	}
 	p.print(fields.Closing, token.RPAREN)
 }
@@ -166,21 +185,12 @@ func (p *Printer) signature(params, result *ast.FieldList) {
 	}
 }
 
-func (p *Printer) identList(list []*ast.Ident) {
-	l := len(list) - 1
-	for i, x := range list {
-		p.print(x)
-		if i < l {
-			p.print(token.COMMA, blank)
-		}
-	}
-}
+type nameMod func(string) string
 
-func (p *Printer) identListPrefixed(list []*ast.Ident, prefix string) {
+func (p *Printer) identList(list []*ast.Ident, modifier nameMod) {
 	l := len(list) - 1
 	for i, x := range list {
-		p.print(prefix)
-		p.print(x)
+		p.print(modifier(x.Name))
 		if i < l {
 			p.print(token.COMMA, blank)
 		}

@@ -26,3 +26,19 @@ var goTypeToRuby = map[string]string{
 	"int":  "Fixnum",
 	"uint": "Fixnum",
 }
+
+type rubyType int
+
+const (
+	ARRAY rubyType = iota
+	HASH
+	PROC
+)
+
+var rubyTypes = map[rubyType]string{
+	ARRAY: "Array",
+	HASH:  "Hash",
+	PROC:  "Proc",
+}
+
+func (t rubyType) String() string { return rubyTypes[t] }

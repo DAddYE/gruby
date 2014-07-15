@@ -24,7 +24,20 @@ func (p *Printer) expr1(exp ast.Expr, prec1, depth int) {
 	// case *ast.StarExpr:
 	// case *ast.TypeAssertExpr:
 	// case *ast.CallExpr:
-	// case *ast.UnaryExpr:
+	case *ast.UnaryExpr:
+		const prec = token.UnaryPrec
+		if prec < prec1 {
+			p.print(token.LPAREN)
+			p.expr(x)
+			p.print(token.RPAREN)
+		} else {
+			p.print(x.Op)
+			if x.Op == token.RANGE {
+				p.print(blank)
+			}
+			p.expr1(x.X, prec, depth)
+		}
+
 	case *ast.BinaryExpr:
 		if depth < 1 {
 			panicf("depth < 1:", depth)
@@ -34,23 +47,32 @@ func (p *Printer) expr1(exp ast.Expr, prec1, depth int) {
 
 	// case *ast.KeyValueExpr:
 
-	// case *ast.ArrayType:
+	case *ast.ArrayType:
+		p.print(ARRAY)
+
 	case *ast.StructType:
 		p.print(STRUCT, DOT, NEW, token.LPAREN)
 		p.fieldList(x.Fields)
 		p.print(token.RPAREN)
-	// case *ast.FuncType:
-	// case *ast.InterfaceType:
-	// case *ast.MapType:
+
+	case *ast.FuncType:
+		p.print(PROC)
+
+	case *ast.InterfaceType:
+		// we can consider it as Object
+	case *ast.MapType:
+		p.print(HASH)
+
 	// case *ast.ChanType:
 
 	case *ast.Ident:
 		if p.context == inConst && x.Name == "iota" {
-			p.expr(&ast.BasicLit{Value: "0", Kind: token.INT})
 			p.context = inIota
+			p.expr(&ast.BasicLit{Value: "0", Kind: token.INT})
 		} else {
 			p.print(x.Name)
 		}
+
 	default:
 		panicf("print: not implemented yet (%T) %+v", x, x)
 	}
@@ -63,14 +85,15 @@ func (p *Printer) fieldList(f *ast.FieldList) {
 	names := []*ast.Ident{}
 	for _, field := range f.List {
 		if len(field.Names) == 0 {
-			// names = append(names, field.Type)
+			ident := field.Type.(*ast.Ident)
+			names = append(names, ident)
 			continue
 		}
 		for _, name := range field.Names {
 			names = append(names, name)
 		}
 	}
-	p.identListPrefixed(names, ":")
+	p.identList(names, symbolize)
 }
 
 func (p *Printer) expr0(x ast.Expr, depth int) {
